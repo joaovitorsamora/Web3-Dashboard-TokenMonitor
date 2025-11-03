@@ -355,22 +355,24 @@ async function updateConversion() {
 
     const brlRateInput = document.getElementById("brlRateInput")
     const brlRate = parseFloat(brlRateInput?.value)
+    
 
-    if (!isNaN(usdRate) && usdRate > 0) {
+    if (!isNaN(usdRate) && usdRate > 0 || !isNaN(brlRate) && brlRate > 0) {
       // 1 USDT ≈ 1 USD
       const priceInBrl = priceInUsdt * usdRate;
       const srcInBrl = priceInBrl * brlRate
 
       // Exibe preço unitário do token em BRL
-      document.getElementById("oneSrcBrl").textContent = `R$ ${priceInBrl.toFixed(8)}`;
+      document.getElementById("oneSrcBrl").textContent = `R$ ${isNaN(priceInBrl.toFixed(8)) ? "-" : priceInBrl.toFixed(8)}`;
 
       // Valor total do usuário em BRL
       const walletValueBRL = balanceSRC * priceInBrl;
-      document.getElementById("oneSrcBrlprice").textContent = `R$ ${walletValueBRL.toFixed(2)}`;
-      document.getElementById("oneSrcBrlpricetyped").textContent = `R$ ${srcInBrl.toFixed(2)}`
+      document.getElementById("oneSrcBrlprice").textContent = `R$ ${isNaN(walletValueBRL.toFixed(2)) ? "-" : walletValueBRL.toFixed(2)}`;
+      document.getElementById("oneSrcBrlpricetyped").textContent = `R$ ${isNaN(srcInBrl.toFixed(2)) ? "-" : srcInBrl.toFixed(2)}`
     } else {
       document.getElementById("oneSrcBrl").textContent = "-";
       document.getElementById("oneSrcBrlprice").textContent = "-";
+      document.getElementById("oneSrcBrlpricetyped").textContent = "-"
     }
 
   } catch (e) {
@@ -378,6 +380,7 @@ async function updateConversion() {
     document.getElementById("oneSrcUsdt").textContent = "0";
     document.getElementById("oneSrcBrl").textContent = "-";
     document.getElementById("oneSrcBrlprice").textContent = "-";
+    document.getElementById("oneSrcBrlpricetyped").textContent = "-"
   }
 }
 
