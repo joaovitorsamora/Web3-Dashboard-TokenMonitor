@@ -49,30 +49,42 @@
     </div>
   </div>
 
-    <div class="section">
-    <h2>Conversão SRC</h2>
-    <div class="flex-row">
-      <div class="card">
-        <p>💰 1 SRC em USDT:</p>
-        <span id="oneSrcUsdt">0</span>
-      </div>
-      <div class="card">
-        <p>💵 Cotação do Dólar (USD → BRL)</p>
-        <input type="number" id="usdRateInput" placeholder="Ex: 5.65" step="0.01" />
-        <p>💸 1 SRC em BRL:</p>
-        <span id="oneSrcBrl">0</span>
-      </div>
-      <div class="card">
-        <p>💰 Quanto de SRC em BRL eu tenho:</p>
-        <span id="oneSrcBrlprice">0</span>
-      </div>
-      <div class="card">
-        <p>💰 Quanto de SRC em BRL eu tenho com esse valor:</p>
-        <input type="number" id="brlRateInput" placeholder="Ex: 1000000"/>
-        <span id="oneSrcBrlpricetyped">0</span>
-      </div>
+   <div class="section">
+  <h2>Conversão SRC</h2>
+  <div class="flex-row">
+    <div class="card">
+      <p>💰 1 SRC em USDT:</p>
+      <span id="oneSrcUsdt">0</span>
+    </div>
+
+    <div class="card">
+      <p>💵 Cotação do Dólar (USD → BRL)</p>
+      <input type="number" id="usdRateInput" placeholder="Ex: 5.65" step="0.01" />
+      <p>💸 1 SRC em BRL:</p>
+      <span id="oneSrcBrl">0</span>
+    </div>
+
+    <div class="card">
+      <p>💰 Quanto de SRC em BRL eu tenho:</p>
+      <span id="oneSrcBrlprice">0</span>
+    </div>
+
+    <div class="card">
+      <p>💰 Quanto de SRC em BRL eu tenho com esse valor:</p>
+      <input type="number" id="brlRateInput" placeholder="Ex: 1000000"/>
+      <span id="oneSrcBrlpricetyped">0</span>
+    </div>
+
+    <!-- 🆕 NOVO BLOCO: USDT → SRC -->
+    <div class="card">
+      <p>💵 Quantos USDT quero investir:</p>
+      <input type="number" id="usdtInput" placeholder="Ex: 1000" step="0.01" />
+      <p>💎 Quantos SRC recebo:</p>
+      <span id="usdtToSrcResult">0</span>
     </div>
   </div>
+</div>
+
 
 
   <div class="section">
@@ -108,7 +120,7 @@
   <h2>Queimar SRC</h2>
   <div class="flex-row ">
     <div class="card card-btn10">
-      <button id="burn10Btn">🔥 Queimar 68% do saldo</button>
+      <button id="burn10Btn"></button>
     </div>
     <div class="card">
       <input type="number" id="burnAmount" placeholder="Digite quanto queimar (SRC)" />
@@ -129,6 +141,8 @@
 
 <script>
 let signer, contract, userAddress;
+const USDT_DECIMALS = 6;
+const SRC_DECIMALS = 18;
 
 const contractAddress = "0x354Cc1E38e8971fD68dAB77A24a6AD97B48587d5";
 const quoteTokenAddress = "0xaE7c24Cc1387689c455391D133F311572dE07a87";
@@ -202,75 +216,107 @@ if(window.ethereum){
 
 
 
-async function buySRC(){
-  try{
-    const amount = document.getElementById("buyAmount").value;
-    if(!amount || amount <=0) return alert("Valor inválido");
-    const usdtAmount = ethers.utils.parseUnits(amount,6);
-    await window.usdt.approve(contractAddress, usdtAmount);
+// ====== BUY SRC ======
+async function buySRC() {
+  try {
+    const input = document.getElementById("buyAmount").value.trim();
+    if (!input || parseFloat(input) <= 0) return alert("Valor inválido");
+
+    const usdtAmount = ethers.utils.parseUnits(input, 6); // USDT tem 6 decimais!
+
+    const approveTx = await window.usdt.approve(contractAddress, usdtAmount);
+    await approveTx.wait();
+
     const tx = await contract.buy(usdtAmount);
     await tx.wait();
-    updateUI();
-  } catch(e){ console.error(e); alert("Erro ao comprar"); }
-}
 
-async function sellSRC(){
-  try{
-    const amount = document.getElementById("sellAmount").value;
-    if(!amount || amount <=0) return alert("Valor inválido");
-    const srcAmount = ethers.utils.parseUnits(amount,18);
+    updateUI();
+    alert(`Compra de ${input} USDT realizada com sucesso!`);
+  } catch (e) {
+    console.error(e);
+    alert("Erro ao comprar SRC");
+  }
+}
+// ====== SELL SRC ======
+async function sellSRC() {
+  try {
+    const input = document.getElementById("sellAmount").value.trim();
+    if (!input || parseFloat(input) <= 0) return alert("Valor inválido");
+
+    const srcAmount = ethers.utils.parseUnits(input, 18);
+
     const tx = await contract.sell(srcAmount);
     await tx.wait();
+
     updateUI();
-  } catch(e){ console.error(e); alert("Erro ao vender"); }
-}
-
-async function stakeSRC(){
-  try{
-    const amount = document.getElementById("stakeAmount").value;
-    if(!amount || amount <=0) return alert("Valor inválido");
-    const srcAmount = ethers.utils.parseUnits(amount,18);
-    const tx = await contract.stake(srcAmount);
-    await tx.wait();
-    updateUI();
-  } catch(e){ console.error(e); alert("Erro ao fazer stake"); }
-}
-
-async function unstakeSRC(){
-  try{
-    const amount = document.getElementById("unstakeAmount").value;
-    if(!amount || amount <=0) return alert("Valor inválido");
-    const srcAmount = ethers.utils.parseUnits(amount,18);
-    const tx = await contract.unstake(srcAmount);
-    await tx.wait();
-    updateUI();
-  } catch(e){ console.error(e); alert("Erro ao fazer unstake"); }
-}
-
-async function burn10PercentSRC(){
-  try {
-    if(!contract || !userAddress) return alert("Conecte sua carteira primeiro.");
-
-    const balance = await contract.balanceOf(userAddress);
-    if(balance.eq(0)) return alert("Saldo SRC insuficiente.");
-
-    // Calcula 10% do saldo
-    const tenPercent = balance.div(68);
-
-    const tx = await contract.burn(tenPercent);
-    await tx.wait();
-
-    alert(`🔥 Queimados 68% do seu saldo SRC (${ethers.utils.formatUnits(tenPercent,18)} SRC)`);
-    updateUI();
-  } catch(e){
+    alert(`Venda de ${input} SRC realizada com sucesso!`);
+  } catch (e) {
     console.error(e);
-    alert("Erro ao queimar 68% do saldo. Certifique-se que é o dono do contrato.");
+    alert("Erro ao vender SRC");
   }
 }
 
-async function updateUI(){
-  if(!contract || !userAddress) return;
-  try{
+// ====== STAKE / UNSTAKE ======
+async function stakeSRC() {
+  try {
+    const amount = document.getElementById("stakeAmount").value;
+    if (!amount || amount <= 0) return alert("Valor inválido");
+
+    const srcAmount = ethers.utils.parseUnits(amount, 18);
+    const tx = await contract.stake(srcAmount);
+    await tx.wait();
+
+    updateUI();
+  } catch (e) {
+    console.error(e);
+    alert("Erro ao fazer stake");
+  }
+}
+
+async function unstakeSRC() {
+  try {
+    const amount = document.getElementById("unstakeAmount").value;
+    if (!amount || amount <= 0) return alert("Valor inválido");
+
+    const srcAmount = ethers.utils.parseUnits(amount, 18);
+    const tx = await contract.unstake(srcAmount);
+    await tx.wait();
+
+    updateUI();
+  } catch (e) {
+    console.error(e);
+    alert("Erro ao fazer unstake");
+  }
+}
+
+// ====== BURN ======
+async function burnCustomSRC() {
+  try {
+    if (!contract || !userAddress) return alert("Conecte sua carteira primeiro.");
+
+    const amount = document.getElementById("burnAmount").value;
+    if (!amount || amount <= 0) return alert("Valor inválido");
+
+    const balance = await contract.balanceOf(userAddress);
+    const burnAmount = ethers.utils.parseUnits(amount, 18);
+
+    if (burnAmount.gt(balance)) return alert("Saldo insuficiente para queimar essa quantidade.");
+
+    const tx = await contract.burn(burnAmount);
+    await tx.wait();
+
+    alert(`🔥 Queimados ${amount} SRC`);
+    updateUI();
+  } catch (e) {
+    console.error(e);
+    alert("Erro ao queimar tokens.");
+  }
+}
+
+// ====== UPDATE UI ======
+async function updateUI() {
+  if (!contract || !userAddress) return;
+  try {
     const [supply, price, volume, valuation, srcBalance, reward] = await Promise.all([
       contract.totalSupply(),
       contract.getCurrentPrice(),
@@ -280,112 +326,136 @@ async function updateUI(){
       contract.calculateRewards(userAddress)
     ]);
 
-    document.getElementById("totalSupply").textContent = ethers.utils.formatUnits(supply,18);
-    document.getElementById("price").textContent = ethers.utils.formatUnits(price,18);
+    document.getElementById("totalSupply").textContent = ethers.utils.formatUnits(supply, 18);
+    document.getElementById("price").textContent = ethers.utils.formatUnits(price, 18);
     document.getElementById("searchVolume").textContent = volume.toString();
-    document.getElementById("valuation").textContent = ethers.utils.formatUnits(valuation,18);
-    document.getElementById("srcBalance").textContent = ethers.utils.formatUnits(srcBalance,18);
-    document.getElementById("reward").textContent = ethers.utils.formatUnits(reward,18);
+    document.getElementById("valuation").textContent = ethers.utils.formatUnits(valuation, 18);
+    document.getElementById("srcBalance").textContent = ethers.utils.formatUnits(srcBalance, 18);
+    document.getElementById("reward").textContent = ethers.utils.formatUnits(reward, 18);
 
-    if(window.usdt){
-      const usdtBalance = await window.usdt.balanceOf(userAddress);
-      document.getElementById("usdtBalance").textContent = ethers.utils.formatUnits(usdtBalance,6);
-    }
+    if (window.usdt) {
+  const usdtBalance = await window.usdt.balanceOf(userAddress);
+  document.getElementById("usdtBalance").textContent = ethers.utils.formatUnits(usdtBalance, 6); // 6 decimais
+}
 
-    // ====== Atualiza gráfico ======
-    const formattedPrice = parseFloat(ethers.utils.formatUnits(price,18));
+    // Atualiza gráfico
+    const formattedPrice = parseFloat(ethers.utils.formatUnits(price, 18));
     const now = new Date().toLocaleTimeString();
 
     priceHistory.push(formattedPrice);
     timeLabels.push(now);
 
-    // Limitar histórico a 20 pontos
-    if(priceHistory.length > 20){
+    if (priceHistory.length > 20) {
       priceHistory.shift();
       timeLabels.shift();
     }
 
     priceChart.update();
 
-  } catch(e){ console.error(e); }
-}
-
-async function burnCustomSRC(){
-  try {
-    if(!contract || !userAddress) return alert("Conecte sua carteira primeiro.");
-
-    const amount = document.getElementById("burnAmount").value;
-    if(!amount || amount <= 0) return alert("Valor inválido.");
-
-    const balance = await contract.balanceOf(userAddress);
-    const burnAmount = ethers.utils.parseUnits(amount, 18);
-
-    if(burnAmount.gt(balance)) return alert("Saldo insuficiente para queimar essa quantidade.");
-
-    const tx = await contract.burn(burnAmount);
-    await tx.wait();
-
-    alert(`🔥 Queimados ${amount} SRC`);
-    updateUI();
-  } catch(e){
+  } catch (e) {
     console.error(e);
-    alert("Erro ao queimar tokens.");
   }
 }
 
+// ====== UPDATE CONVERSION ======
 async function updateConversion() {
   try {
-    if (!contract) return;
+    if (!contract || !userAddress) return;
 
-    // Pega o preço on-chain (1 SRC em USDT)
+    const usdRate = parseFloat(document.getElementById("usdRateInput")?.value) || 0;
+    const typedBrl = parseFloat(document.getElementById("brlRateInput")?.value) || 0;
+    const usdtInput = parseFloat(document.getElementById("usdtInput")?.value) || 0;
+
     const priceRaw = await contract.getCurrentPrice();
-    const priceInUsdt = parseFloat(ethers.utils.formatUnits(priceRaw, 18)); // assume USDT ≈ USD
-
-    // Pega saldo do usuário
     const balanceRaw = await contract.balanceOf(userAddress);
-    const balanceSRC = parseFloat(ethers.utils.formatUnits(balanceRaw, 18));
 
-    // Exibe o preço unitário em USDT
-    document.getElementById("oneSrcUsdt").textContent =
-      isFinite(priceInUsdt) && priceInUsdt > 0 ? priceInUsdt.toFixed(8) : "0";
+    // --- PREÇO: 1 SRC = ? USDT ---
+    const oneSrcUsdt = Number(ethers.utils.formatUnits(priceRaw, 6)); // USDT tem 6 decimais!
+    const displayPrecision = oneSrcUsdt < 0.000001 ? 20 : 6;
+    document.getElementById("oneSrcUsdt").textContent = `${oneSrcUsdt.toFixed(displayPrecision)} USDT`;
 
-    // Lê cotação USD -> BRL informada
-    const usdRateInput = document.getElementById("usdRateInput");
-    const usdRate = parseFloat(usdRateInput?.value);
+    // --- 1 SRC em BRL ---
+    const oneSrcBrl = usdRate > 0 ? oneSrcUsdt * usdRate : 0;
+    document.getElementById("oneSrcBrl").textContent = `R$ ${oneSrcBrl < 0.001 ? oneSrcBrl.toFixed(18) : oneSrcBrl.toFixed(2)}`;
 
-    const brlRateInput = document.getElementById("brlRateInput")
-    const brlRate = parseFloat(brlRateInput?.value)
-    
-
-    if (!isNaN(usdRate) && usdRate > 0 || !isNaN(brlRate) && brlRate > 0) {
-      // 1 USDT ≈ 1 USD
-      const priceInBrl = priceInUsdt * usdRate;
-      const srcInBrl = priceInBrl * brlRate
-
-      // Exibe preço unitário do token em BRL
-      document.getElementById("oneSrcBrl").textContent = `R$ ${isNaN(priceInBrl.toFixed(8)) ? "-" : priceInBrl.toFixed(8)}`;
-
-      // Valor total do usuário em BRL
-      const walletValueBRL = balanceSRC * priceInBrl;
-      document.getElementById("oneSrcBrlprice").textContent = `R$ ${isNaN(walletValueBRL.toFixed(2)) ? "-" : walletValueBRL.toFixed(2)}`;
-      document.getElementById("oneSrcBrlpricetyped").textContent = `R$ ${isNaN(srcInBrl.toFixed(2)) ? "-" : srcInBrl.toFixed(2)}`
+    // --- VALOR TOTAL DA CARTEIRA EM BRL ---
+    if (balanceRaw.gt(0)) {
+      const totalUsdtRaw = await contract.getUsdtForSrc(balanceRaw);
+      const totalUsdt = Number(ethers.utils.formatUnits(totalUsdtRaw, 6)); // 6 decimais
+      const walletValueBrl = usdRate > 0 ? totalUsdt * usdRate : 0;
+      document.getElementById("oneSrcBrlprice").textContent = `R$ ${walletValueBrl.toFixed(2)}`;
     } else {
-      document.getElementById("oneSrcBrl").textContent = "-";
-      document.getElementById("oneSrcBrlprice").textContent = "-";
-      document.getElementById("oneSrcBrlpricetyped").textContent = "-"
+      document.getElementById("oneSrcBrlprice").textContent = "R$ 0.00";
     }
 
-  } catch (e) {
-    console.error("Erro ao atualizar conversão", e);
-    document.getElementById("oneSrcUsdt").textContent = "0";
+    // --- CONVERSÃO PERSONALIZADA: BRL → SRC (via USDT) ---
+    if (typedBrl > 0) {
+      const usdtFromBrl = usdRate > 0 ? typedBrl / usdRate : 0;
+      const usdtWei = ethers.utils.parseUnits(usdtFromBrl.toFixed(6), 6); // 6 decimais
+      const srcRaw = await contract.getSrcForUsdt(usdtWei);
+      const srcAmount = Number(ethers.utils.formatUnits(srcRaw, 18));
+
+      document.getElementById("oneSrcBrlpricetyped").textContent =
+        `R$ ${typedBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ≈ ${usdtFromBrl.toFixed(6)} USDT ≈ ${srcAmount.toLocaleString("pt-BR")} SRC`;
+    } else {
+      document.getElementById("oneSrcBrlpricetyped").textContent = "-";
+    }
+
+    // --- USDT → SRC ---
+    if (usdtInput > 0) {
+      const usdtWei = ethers.utils.parseUnits(usdtInput.toFixed(6), 6);
+      const srcRaw = await contract.getSrcForUsdt(usdtWei);
+      const srcAmount = Number(ethers.utils.formatUnits(srcRaw, 18));
+      document.getElementById("usdtToSrcResult").textContent =
+        `${usdtInput.toLocaleString("pt-BR")} USDT ≈ ${srcAmount.toLocaleString("pt-BR")} SRC`;
+    } else {
+      document.getElementById("usdtToSrcResult").textContent = "0";
+    }
+
+  } catch (err) {
+    console.error("Erro ao atualizar conversão:", err);
+    document.getElementById("oneSrcUsdt").textContent = "Erro";
     document.getElementById("oneSrcBrl").textContent = "-";
     document.getElementById("oneSrcBrlprice").textContent = "-";
-    document.getElementById("oneSrcBrlpricetyped").textContent = "-"
+    document.getElementById("oneSrcBrlpricetyped").textContent = "-";
+    document.getElementById("usdtToSrcResult").textContent = "Erro";
+  }
+}
+async function burn10PercentSRC() {
+  if (!contract || !userAddress) return alert("Conecte sua carteira primeiro.");
+
+  try {
+    const percent = 95; // Percentual a queimar
+    const balance = await contract.balanceOf(userAddress);
+
+    if (balance.eq(0)) return alert("Saldo SRC insuficiente.");
+
+    const balanceFormatted = parseFloat(ethers.utils.formatUnits(balance, 18));
+    const amountToBurnFormatted = (balanceFormatted * percent) / 100;
+
+    // Converte para BigNumber
+    const amountToBurn = ethers.utils.parseUnits(amountToBurnFormatted.toString(), 18);
+
+    const tx = await contract.burn(amountToBurn);
+    await tx.wait();
+
+    alert(`🔥 Queimados ${percent}% do total supply SRC (${amountToBurnFormatted} SRC)`);
+
+    updateUI();
+  } catch (e) {
+    console.error(e);
+    alert(`Erro ao queimar ${percent}% do saldo. Certifique-se que é o dono do contrato.`);
   }
 }
 
 
+document.addEventListener("DOMContentLoaded", () => {
+  const percent = 95;
+  const button = document.getElementById("burn10Btn");
+  if (button) button.textContent = `🔥 Queimar ${percent}% do saldo`;
+});
 
+document.getElementById("brlRateInput").addEventListener("input", updateConversion);
 document.getElementById("usdRateInput").addEventListener("input", updateConversion);
 document.getElementById("burnCustomBtn").onclick = burnCustomSRC;
 document.getElementById("burn10Btn").onclick = burn10PercentSRC;
