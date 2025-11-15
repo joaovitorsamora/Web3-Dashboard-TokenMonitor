@@ -122,7 +122,8 @@
 
 <script>
 
-const SRC_ADDRESS = "0xE755051657099d1cA2AaBACf98A3A0848c43C851";
+const SRC_ADDRESS = "0xE755051657099D1cA2AABacF98A3A0848c43C851";
+
 const USDT_ADDRESS = "0x7eF95A0fE463B3F2681b76234E8C99f56C0C8F5E";
 
 // ABI COMPLETO (gerado do seu contrato final)
@@ -181,6 +182,8 @@ async function connectWallet() {
   provider = new ethers.BrowserProvider(window.ethereum);
   signer = await provider.getSigner();
   walletAddress = await signer.getAddress();
+
+  ethers.allowUnsafeLegacyAddress = true;
 
   src = new ethers.Contract(SRC_ADDRESS, SRC_ABI, signer);
 
